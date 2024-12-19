@@ -2,26 +2,28 @@
 
 namespace App\Http\Controllers\API;
 
+use Exception;
+use App\Models\Role;
+use Illuminate\Http\Request;
 use App\Helpers\ResponseFormatter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
-use App\Models\Role;
-use Exception;
-use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
-    public function fetch(Request $request) {
+    public function fetch(Request $request)
+    {
         $id = $request->input('id');
         $name = $request->input('name');
         $limit = $request->input('limit', 10);
+        $with_responsibilities = $request->input('with_responsibilities', false);
 
         $roleQuery = Role::query();
 
         // Get single data
         if ($id) {
-            $role = $roleQuery->find($id);
+            $role = $roleQuery->with('responsibilities')->find($id);
 
             if ($role) {
                 return ResponseFormatter::success($role, 'Role found');
@@ -37,16 +39,20 @@ class RoleController extends Controller
             $roles->where('name', 'like', '%' . $name . '%');
         }
 
+        if ($with_responsibilities) {
+            $roles->with('responsibilities');
+        }
+
         return ResponseFormatter::success(
             $roles->paginate($limit),
             'Roles found'
         );
     }
 
-    public function create(CreateRoleRequest $request) {
+    public function create(CreateRoleRequest $request)
+    {
         try {
-
-            // Create Role
+            // Create role
             $role = Role::create([
                 'name' => $request->name,
                 'company_id' => $request->company_id,
@@ -57,13 +63,13 @@ class RoleController extends Controller
             }
 
             return ResponseFormatter::success($role, 'Role created');
-
         } catch (Exception $e) {
             return ResponseFormatter::error($e->getMessage(), 500);
         }
     }
 
-    public function update(UpdateRoleRequest $request, $id) {
+    public function update(UpdateRoleRequest $request, $id)
+    {
 
         try {
             // Get role
@@ -81,13 +87,13 @@ class RoleController extends Controller
             ]);
 
             return ResponseFormatter::success($role, 'Role updated');
-
         } catch (Exception $e) {
             return ResponseFormatter::error($e->getMessage(), 500);
         }
     }
 
-    public function destroy($id){
+    public function destroy($id)
+    {
         try {
             // Get role
             $role = Role::find($id);
@@ -102,8 +108,7 @@ class RoleController extends Controller
             // Delete role
             $role->delete();
 
-            return ResponseFormatter::success($role, 'Role deleted');
-
+            return ResponseFormatter::success('Role deleted');
         } catch (Exception $e) {
             return ResponseFormatter::error($e->getMessage(), 500);
         }
